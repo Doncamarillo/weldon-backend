@@ -1,0 +1,25 @@
+# Virtual environment directory
+venv/
+
+# Environment variables files
+.env
+.flaskenv
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Database migrations
+migrations/versions/
+
+# Miscellaneous files
+*.log
+*.sqlite3
+
+# IDE-specific files
+.vscode/
+.idea/
+*.iml
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
