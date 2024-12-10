@@ -6,21 +6,21 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime
 
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    'DATABASE_URL',
-    'postgresql://default_user:default_password@localhost/welldon_db'
-)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://default_user:default_password@localhost/welldon_db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize extensions
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
 
+# Models
 class User(db.Model):
-    __tablename__ = 'users'
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -49,7 +49,7 @@ class Project(db.Model):
     image_url = db.Column(db.String(500), nullable=True)
     url = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     user = db.relationship('User', back_populates='projects')
     comments = db.relationship('Comment', back_populates='project', cascade="all, delete")
@@ -62,7 +62,7 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
 
     user = db.relationship('User', back_populates='comments')
@@ -71,7 +71,7 @@ class Comment(db.Model):
     def __repr__(self):
         return f'<Comment {self.content[:20]}>'
 
-
+# Routes
 @app.route('/users', methods=['POST'])
 def create_user():
     try:
@@ -120,6 +120,30 @@ def create_comment():
         return jsonify({"id": comment.id, "content": comment.content[:20]}), 201
     except KeyError as e:
         return jsonify({"error": f"Missing field: {e}"}), 400
+    except Exception as e:
+        return jsonify({"error": "Server error", "details": str(e)}), 500
+
+@app.route('/users', methods=['GET'])
+def get_users():
+    try:
+        users = User.query.all()
+        return jsonify([{"id": user.id, "username": user.username, "email": user.email} for user in users])
+    except Exception as e:
+        return jsonify({"error": "Server error", "details": str(e)}), 500
+
+@app.route('/projects', methods=['GET'])
+def get_projects():
+    try:
+        projects = Project.query.all()
+        return jsonify([{"id": project.id, "title": project.title, "description": project.description} for project in projects])
+    except Exception as e:
+        return jsonify({"error": "Server error", "details": str(e)}), 500
+
+@app.route('/comments', methods=['GET'])
+def get_comments():
+    try:
+        comments = Comment.query.all()
+        return jsonify([{"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id} for comment in comments])
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
