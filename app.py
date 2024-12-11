@@ -74,22 +74,47 @@ def get_user(user_id):
         return jsonify({"error": "User not found"}), 404
     return jsonify({"id": user.id, "username": user.username, "email": user.email}), 200
 
-@app.route('/users', methods=['POST'])
-def create_user():
+@app.route('/signup', methods=['POST'])
+def signup():
     try:
-        new_user = request.json
+        data = request.json
+
+       
+        if User.query.filter_by(username=data['username']).first():
+            return jsonify({"error": "Username already exists"}), 400
+
+       
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({"error": "Email already exists"}), 400
+
         user = User(
-            username=new_user['username'],
-            email=new_user['email'],
-            password_hash=new_user['password']
+            username=data['username'],
+            email=data['email'],
+            password_hash=data['password'] 
         )
         db.session.add(user)
         db.session.commit()
-        return jsonify({"id": user.id, "username": user.username}), 201
+        return jsonify({"message": "User created successfully"}), 201
+
     except KeyError as e:
         return jsonify({"error": f"Missing field: {e}"}), 400
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
+
+@app.route('/signin', methods=['POST'])
+def signin():
+    try:
+        data = request.json
+        user = User.query.filter_by(username=data['username']).first()
+        if not user or user.password_hash != data['password']:
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        token = jwt.encode({"id": user.id, "username": user.username}, os.getenv('JWT_SECRET'), algorithm="HS256")
+        return jsonify({"token": token})
+    except Exception as e:
+        return jsonify({"error": "Server error", "details": str(e)}), 500
+
 
 @app.route('/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):

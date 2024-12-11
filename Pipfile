@@ -6,8 +6,8 @@ name = "pypi"
 [packages]
 flask = "*"
 psycopg2 = "*"
-python-dotenv = "*"
 pyjwt = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
