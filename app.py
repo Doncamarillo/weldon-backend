@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 import jwt
 import os
 from datetime import datetime
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
 
@@ -25,14 +28,25 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     projects = db.relationship('Project', back_populates='user', cascade="all, delete-orphan")
     comments = db.relationship('Comment', back_populates='user', cascade="all, delete-orphan")
+    twitter = db.Column(db.String(120), nullable=True)
+    linkedin = db.Column(db.String(120), nullable=True)
+    youtube = db.Column(db.String(120), nullable=True)
+    github = db.Column(db.String(120), nullable=True)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
+
 
 class Project(db.Model):
     __tablename__ = 'project'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String, nullable=True)
+    image_url = db.Column(db.String(500), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User', back_populates='projects')
     comments = db.relationship('Comment', back_populates='project', cascade="all, delete-orphan")
+
 
 class Comment(db.Model):
     __tablename__ = 'comment'
@@ -72,7 +86,17 @@ def get_user(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
-    return jsonify({"id": user.id, "username": user.username, "email": user.email}), 200
+    user_data = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "twitter": user.twitter,
+        "linkedin": user.linkedin,
+        "youtube": user.youtube,
+        "github": user.github
+    }
+    return jsonify(user_data), 200
+
 
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -111,9 +135,10 @@ def signin():
             return jsonify({"error": "Invalid credentials"}), 401
         
         token = jwt.encode({"id": user.id, "username": user.username}, os.getenv('JWT_SECRET'), algorithm="HS256")
-        return jsonify({"token": token})
+        return jsonify({"token": token, "id": user.id})
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
 
 
 @app.route('/users/<int:user_id>', methods=['PUT'])
@@ -129,19 +154,29 @@ def update_user(user_id):
         if 'email' in data:
             user.email = data['email']
         if 'password' in data:
-            user.password_hash = data['password'] 
+            user.password_hash = data['password']
         if hasattr(user, 'first_name') and 'first_name' in data:
             user.first_name = data['first_name']
         if hasattr(user, 'last_name') and 'last_name' in data:
             user.last_name = data['last_name']
         if hasattr(user, 'bio') and 'bio' in data:
             user.bio = data['bio']
+        
+        if 'twitter' in data:
+            user.twitter = data['twitter']
+        if 'linkedin' in data:
+            user.linkedin = data['linkedin']
+        if 'youtube' in data:
+            user.youtube = data['youtube']
+        if 'github' in data:
+            user.github = data['github']
 
         db.session.commit()
         return jsonify({"message": "User updated successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
 
 
 
@@ -154,35 +189,86 @@ def delete_user(user_id):
     db.session.commit()
     return jsonify({"message": "User deleted successfully"}), 200
 
+@app.route('/users/<int:user_id>/projects', methods=['GET'])
+def get_user_projects(user_id):
+    try:
+        user = User.query.get_or_404(user_id)
+        projects = Project.query.filter_by(user_id=user.id).all()
+        projects_list = [
+            {
+                "id": project.id,
+                "title": project.title,
+                "description": project.description,
+                "image_url": project.image_url,
+                "user_id": project.user_id
+            } for project in projects
+        ]
+        return jsonify(projects_list), 200
+    except Exception as e:
+        app.logger.error('Error fetching user projects: %s', e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/projects', methods=['GET'])
 def get_projects():
-    projects = Project.query.all()
-    return jsonify([{"id": project.id, "title": project.title, "user_id": project.user_id} for project in projects]), 200
+    try:
+        projects = Project.query.join(User).all()
+        project_list = [
+            {
+                "id": project.id,
+                "title": project.title,
+                "description": project.description,
+                "image_url": project.image_url,
+                "user_id": project.user_id,
+                "username": project.user.username 
+            }
+            for project in projects
+        ]
+        return jsonify(project_list), 200
+    except Exception as e:
+        app.logger.error('Error fetching projects: %s', e)
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/projects/<int:project_id>', methods=['GET'])
-def get_project(project_id):
-    project = Project.query.get(project_id)
-    if not project:
-        return jsonify({"error": "Project not found"}), 404
-    return jsonify({"id": project.id, "title": project.title, "user_id": project.user_id}), 200
+
+@app.route('/projects/<int:id>', methods=['GET'])
+def get_project(id):
+    try:
+        project = Project.query.get_or_404(id)
+        project_data = {
+            "id": project.id,
+            "title": project.title,
+            "description": project.description,
+            "image_url": project.image_url,
+            "user_id": project.user_id,
+            "username": project.user.username 
+        }
+        return jsonify(project_data), 200
+    except Exception as e:
+        app.logger.error('Error fetching project details: %s', e)
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/projects', methods=['POST'])
 def create_project():
     try:
         data = request.json
+        app.logger.debug('Request data: %s', data)
         if not data.get('title') or not data.get('user_id'):
             return jsonify({"error": "Missing required fields: 'title' or 'user_id'"}), 400
         
         project = Project(
             title=data['title'],
+            description=data.get('description'), 
+            image_url=data.get('image_url'),
             user_id=data['user_id']
         )
         db.session.add(project)
         db.session.commit()
-        return jsonify({"id": project.id, "title": project.title, "user_id": project.user_id}), 201
-
+        return jsonify({"id": project.id, "title": project.title, "description": project.description, "image_url": project.image_url, "user_id": project.user_id}), 201
     except Exception as e:
-        return jsonify({"error": "Server error", "details": str(e)}), 500
+        app.logger.error('Error: %s', e)
+        return jsonify({"error": str(e)}), 500
+
 
     
 @app.route('/projects/<int:project_id>', methods=['PUT'])
