@@ -43,9 +43,11 @@ class Project(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.String, nullable=True)
     image_url = db.Column(db.String(500), nullable=True)
+    deployed_url = db.Column(db.String(500), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User', back_populates='projects')
     comments = db.relationship('Comment', back_populates='project', cascade="all, delete-orphan")
+
 
 
 class Comment(db.Model):
@@ -219,6 +221,7 @@ def get_projects():
                 "title": project.title,
                 "description": project.description,
                 "image_url": project.image_url,
+                "deployed_url": project.deployed_url,
                 "user_id": project.user_id,
                 "username": project.user.username 
             }
@@ -229,7 +232,6 @@ def get_projects():
         app.logger.error('Error fetching projects: %s', e)
         return jsonify({"error": str(e)}), 500
 
-
 @app.route('/projects/<int:id>', methods=['GET'])
 def get_project(id):
     try:
@@ -239,6 +241,7 @@ def get_project(id):
             "title": project.title,
             "description": project.description,
             "image_url": project.image_url,
+            "deployed_url": project.deployed_url,
             "user_id": project.user_id,
             "username": project.user.username 
         }
@@ -246,7 +249,6 @@ def get_project(id):
     except Exception as e:
         app.logger.error('Error fetching project details: %s', e)
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/projects', methods=['POST'])
 def create_project():
@@ -260,11 +262,12 @@ def create_project():
             title=data['title'],
             description=data.get('description'), 
             image_url=data.get('image_url'),
+            deployed_url=data.get('deployed_url'),
             user_id=data['user_id']
         )
         db.session.add(project)
         db.session.commit()
-        return jsonify({"id": project.id, "title": project.title, "description": project.description, "image_url": project.image_url, "user_id": project.user_id}), 201
+        return jsonify({"id": project.id, "title": project.title, "description": project.description, "image_url": project.image_url, "deployed_url": project.deployed_url, "user_id": project.user_id}), 201
     except Exception as e:
         app.logger.error('Error: %s', e)
         return jsonify({"error": str(e)}), 500
