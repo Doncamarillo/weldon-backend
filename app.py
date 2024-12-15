@@ -32,7 +32,7 @@ class User(db.Model):
     linkedin = db.Column(db.String(120), nullable=True)
     youtube = db.Column(db.String(120), nullable=True)
     github = db.Column(db.String(120), nullable=True)
-
+    profile_picture = db.Column(db.String(500), nullable=True)  
     def __repr__(self):
         return f'<User {self.username}>'
 
@@ -95,9 +95,11 @@ def get_user(user_id):
         "twitter": user.twitter,
         "linkedin": user.linkedin,
         "youtube": user.youtube,
-        "github": user.github
+        "github": user.github,
+        "profile_picture": user.profile_picture  
     }
     return jsonify(user_data), 200
+
 
 
 @app.route('/signup', methods=['POST'])
@@ -142,7 +144,6 @@ def signin():
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
 
-
 @app.route('/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
     try:
@@ -172,12 +173,16 @@ def update_user(user_id):
             user.youtube = data['youtube']
         if 'github' in data:
             user.github = data['github']
+        if 'profile_picture' in data:
+            user.profile_picture = data['profile_picture']
 
         db.session.commit()
         return jsonify({"message": "User updated successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
+
 
 
 
