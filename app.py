@@ -7,7 +7,8 @@ import jwt
 import os
 from datetime import datetime
 import logging
-
+import bcrypt
+from functools import wraps
 logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
@@ -19,6 +20,24 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
+
+def token_required(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Token is missing!'}), 403
+        try:
+            token = token.split(" ")[1]
+            decoded_token = jwt.decode(token, os.getenv('JWT_SECRET'), algorithms=["HS256"])
+            current_user = User.query.get(decoded_token['id'])
+            if not current_user:
+                return jsonify({'error': 'User not found!'}), 404
+        except Exception as e:
+            return jsonify({'error': str(e)}), 403
+        return f(current_user, *args, **kwargs)
+    return wrap
+
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -101,27 +120,29 @@ def get_user(user_id):
     return jsonify(user_data), 200
 
 
-
 @app.route('/signup', methods=['POST'])
 def signup():
     try:
         data = request.json
 
-       
+        
         if User.query.filter_by(username=data['username']).first():
             return jsonify({"error": "Username already exists"}), 400
 
-       
         if User.query.filter_by(email=data['email']).first():
             return jsonify({"error": "Email already exists"}), 400
+
+        
+        hashed_password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
 
         user = User(
             username=data['username'],
             email=data['email'],
-            password_hash=data['password'] 
+            password_hash=hashed_password.decode('utf-8') 
         )
         db.session.add(user)
         db.session.commit()
+
         return jsonify({"message": "User created successfully"}), 201
 
     except KeyError as e:
@@ -130,18 +151,25 @@ def signup():
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
 
+
 @app.route('/signin', methods=['POST'])
 def signin():
     try:
         data = request.json
         user = User.query.filter_by(username=data['username']).first()
-        if not user or user.password_hash != data['password']:
+
+      
+        if not user or not bcrypt.checkpw(data['password'].encode('utf-8'), user.password_hash.encode('utf-8')):
             return jsonify({"error": "Invalid credentials"}), 401
         
+       
         token = jwt.encode({"id": user.id, "username": user.username}, os.getenv('JWT_SECRET'), algorithm="HS256")
+        
         return jsonify({"token": token, "id": user.id})
+
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
 
 
 @app.route('/users/<int:user_id>', methods=['PUT'])
