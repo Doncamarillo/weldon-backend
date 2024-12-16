@@ -17,10 +17,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL').replace("postg
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET')
 app.config['SQLALCHEMY_ECHO'] = True
+frontend_url = os.getenv('FRONTEND_URL', '*')
+CORS(app, resources={r"/*": {"origins": frontend_url}})
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-CORS(app)
 
 def token_required(f):
     @wraps(f)
@@ -173,46 +174,38 @@ def signin():
 
 
 
-@app.route('/users/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
+@app.route('/users', methods=['POST'])
+def create_user():
     try:
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
+      
         data = request.json
-        if 'username' in data:
-            user.username = data['username']
-        if 'email' in data:
-            user.email = data['email']
-        if 'password' in data:
-            user.password_hash = data['password']
-        if hasattr(user, 'first_name') and 'first_name' in data:
-            user.first_name = data['first_name']
-        if hasattr(user, 'last_name') and 'last_name' in data:
-            user.last_name = data['last_name']
-        if hasattr(user, 'bio') and 'bio' in data:
-            user.bio = data['bio']
         
-        if 'twitter' in data:
-            user.twitter = data['twitter']
-        if 'linkedin' in data:
-            user.linkedin = data['linkedin']
-        if 'youtube' in data:
-            user.youtube = data['youtube']
-        if 'github' in data:
-            user.github = data['github']
-        if 'profile_picture' in data:
-            user.profile_picture = data['profile_picture']
+        
+        if 'username' not in data or 'email' not in data:
+            return jsonify({"error": "Username and email are required"}), 400
 
+        
+        user = User(
+            username=data['username'],
+            email=data['email'],
+            password_hash=data['password'], 
+            first_name=data.get('first_name', ''),
+            last_name=data.get('last_name', ''),
+            bio=data.get('bio', ''),
+            twitter=data.get('twitter', ''),
+            linkedin=data.get('linkedin', ''),
+            youtube=data.get('youtube', ''),
+            github=data.get('github', ''),
+            profile_picture=data.get('profile_picture', '')
+        )
+
+     
+        db.session.add(user)
         db.session.commit()
-        return jsonify({"message": "User updated successfully"}), 200
 
+        return jsonify({"message": "User created successfully"}), 201
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
-
-
-
 
 
 
