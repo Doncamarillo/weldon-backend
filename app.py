@@ -8,17 +8,27 @@ import os
 import logging
 import bcrypt
 from functools import wraps
+
 logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
 
 app = Flask(__name__)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL').replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET')
 app.config['SQLALCHEMY_ECHO'] = True
-frontend_url = os.getenv('FRONTEND_URL', '*')
-CORS(app, resources={r"/*": {"origins": frontend_url}})
+
+
+frontend_url = os.getenv('FRONTEND_URL', '*')  
+CORS(app, resources={r"/*": {
+    "origins": frontend_url,  
+    "supports_credentials": True, 
+    "methods": ["GET", "POST", "PUT", "DELETE"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}})
+
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
