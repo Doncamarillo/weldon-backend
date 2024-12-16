@@ -14,8 +14,9 @@ logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://default_user:default_password@localhost/welldon_db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
@@ -386,4 +387,4 @@ def delete_comment(comment_id):
     return jsonify({"message": "Comment deleted successfully"}), 200
 
 if __name__ == '__main__':
-    app.run
+    app.run(debug=True)
