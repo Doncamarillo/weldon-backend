@@ -387,4 +387,4 @@ def delete_comment(comment_id):
     return jsonify({"message": "Comment deleted successfully"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run
