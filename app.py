@@ -16,6 +16,8 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL').replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET')
+app.config['SQLALCHEMY_ECHO'] = True
+
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
