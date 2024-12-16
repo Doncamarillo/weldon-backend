@@ -5,7 +5,6 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import jwt
 import os
-from datetime import datetime
 import logging
 import bcrypt
 from functools import wraps
@@ -14,9 +13,9 @@ logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://default_user:default_password@localhost/welldon_db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET')
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
