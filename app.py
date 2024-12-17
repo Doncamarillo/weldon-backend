@@ -352,7 +352,7 @@ def get_comment(comment_id):
         return jsonify({"error": "Comment not found"}), 404
     return jsonify({"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id}), 200
 
-@app.route('/projects/<int:comment_id>/comments', methods=['POST'])
+@app.route('/projects/<int:project_id>/comments', methods=['POST'])
 def create_comment():
     try:
         data = request.json
