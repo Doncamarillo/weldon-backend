@@ -345,29 +345,32 @@ def get_comments():
     comments = Comment.query.all()
     return jsonify([{"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id} for comment in comments]), 200
 
-@app.route('/projects/<int:comment_id>/comments', methods=['GET'])
-def get_comment(comment_id):
-    comment = Comment.query.get(comment_id)
-    if not comment:
-        return jsonify({"error": "Comment not found"}), 404
-    return jsonify({"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id}), 200
+@app.route('/projects/<int:project_id>/comments', methods=['GET'])
+def get_comments(project_id):
+    comments = Comment.query.filter_by(project_id=project_id).all()
+    return jsonify([{
+        "id": comment.id,
+        "content": comment.content,
+        "user_id": comment.user_id,
+        "username": comment.user.username,
+        "project_id": comment.project_id
+    } for comment in comments]), 200
 
 @app.route('/projects/<int:project_id>/comments', methods=['POST'])
-def create_comment():
+def create_comment(project_id):
     try:
         data = request.json
         if not data.get('content') or not data.get('user_id') or not data.get('project_id'):
             return jsonify({"error": "Missing required fields: 'content', 'user_id', or 'project_id'"}), 400
-        
+
         comment = Comment(
             content=data['content'],
             user_id=data['user_id'],
-            project_id=data['project_id']
+            project_id=project_id
         )
         db.session.add(comment)
         db.session.commit()
         return jsonify({"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id}), 201
-
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
