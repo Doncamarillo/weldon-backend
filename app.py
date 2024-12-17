@@ -340,41 +340,38 @@ def delete_project(project_id):
     db.session.commit()
     return jsonify({"message": "Project deleted successfully"}), 200
 
-@app.route('/projects/comments', methods=['GET'])
+@app.route('/comments', methods=['GET'])
 def get_comments():
     comments = Comment.query.all()
     return jsonify([{"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id} for comment in comments]), 200
 
-@app.route('/projects/<int:project_id>/comments', methods=['GET'])
-def get_comments(project_id):
-    comments = Comment.query.filter_by(project_id=project_id).all()
-    return jsonify([{
-        "id": comment.id,
-        "content": comment.content,
-        "user_id": comment.user_id,
-        "username": comment.user.username,
-        "project_id": comment.project_id
-    } for comment in comments]), 200
+@app.route('/comments/<int:comment_id>', methods=['GET'])
+def get_comment(comment_id):
+    comment = Comment.query.get(comment_id)
+    if not comment:
+        return jsonify({"error": "Comment not found"}), 404
+    return jsonify({"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id}), 200
 
-@app.route('/projects/<int:project_id>/comments', methods=['POST'])
-def create_comment(project_id):
+@app.route('/comments', methods=['POST'])
+def create_comment():
     try:
         data = request.json
         if not data.get('content') or not data.get('user_id') or not data.get('project_id'):
             return jsonify({"error": "Missing required fields: 'content', 'user_id', or 'project_id'"}), 400
-
+        
         comment = Comment(
             content=data['content'],
             user_id=data['user_id'],
-            project_id=project_id
+            project_id=data['project_id']
         )
         db.session.add(comment)
         db.session.commit()
         return jsonify({"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id}), 201
+
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
-@app.route('/projects/comments/<int:comment_id>', methods=['PUT'])
+@app.route('/comments/<int:comment_id>', methods=['PUT'])
 def update_comment(comment_id):
     comment = Comment.query.get(comment_id)
     if not comment:
@@ -384,7 +381,7 @@ def update_comment(comment_id):
     db.session.commit()
     return jsonify({"message": "Comment updated successfully"}), 200
 
-@app.route('/projects/comments/<int:comment_id>', methods=['DELETE'])
+@app.route('/comments/<int:comment_id>', methods=['DELETE'])
 def delete_comment(comment_id):
     comment = Comment.query.get(comment_id)
     if not comment:
