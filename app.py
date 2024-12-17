@@ -340,19 +340,19 @@ def delete_project(project_id):
     db.session.commit()
     return jsonify({"message": "Project deleted successfully"}), 200
 
-@app.route('/comments', methods=['GET'])
+@app.route('/projects/comments', methods=['GET'])
 def get_comments():
     comments = Comment.query.all()
     return jsonify([{"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id} for comment in comments]), 200
 
-@app.route('/comments/<int:comment_id>', methods=['GET'])
+@app.route('/projects/<int:comment_id>/comments', methods=['GET'])
 def get_comment(comment_id):
     comment = Comment.query.get(comment_id)
     if not comment:
         return jsonify({"error": "Comment not found"}), 404
     return jsonify({"id": comment.id, "content": comment.content, "user_id": comment.user_id, "project_id": comment.project_id}), 200
 
-@app.route('/comments', methods=['POST'])
+@app.route('/projects/<int:comment_id>/comments', methods=['POST'])
 def create_comment():
     try:
         data = request.json
@@ -371,7 +371,7 @@ def create_comment():
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
-@app.route('/comments/<int:comment_id>', methods=['PUT'])
+@app.route('/projects/comments/<int:comment_id>', methods=['PUT'])
 def update_comment(comment_id):
     comment = Comment.query.get(comment_id)
     if not comment:
@@ -381,7 +381,7 @@ def update_comment(comment_id):
     db.session.commit()
     return jsonify({"message": "Comment updated successfully"}), 200
 
-@app.route('/comments/<int:comment_id>', methods=['DELETE'])
+@app.route('/projects/comments/<int:comment_id>', methods=['DELETE'])
 def delete_comment(comment_id):
     comment = Comment.query.get(comment_id)
     if not comment:
